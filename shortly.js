@@ -2,6 +2,7 @@ var express = require('express');
 var util = require('./lib/utility');
 var partials = require('express-partials');
 var bodyParser = require('body-parser');
+var bcrypt = require('bcrypt-nodejs');
 
 
 var db = require('./app/config');
@@ -93,22 +94,82 @@ function(req, res) {
 //use post to request username and password
   //create new user for redirect if not exist and then something with password if does exists
 // app.post('/login', function(req, res) {
-//   console.log(req.body.username)
-//   var username = req.body.username;
-//   var password = req.body.password;
+//    console.log(req.body.username)
+//    var username = req.body.username;
+//    var password = req.body.password;
+//
+//    new User({ username: username })
+//      .fetch()
+//      .then(function(user) {
+//       if (!user) {
+//         res.redirect('/login');
+//       } else {
+//         bcrypt.compareSync(password, user.get('password'))
+//       }
+//      })
+// });
 
-//   new User({ username: username })
-//     .fetch()
-//     .then(function(user) {
+app.post('/login', function(req, res) {
+   //console.log(req.body.username)
+   //console.log(req.body.password)
+   var username = req.body.username;
+   var password = req.body.password;
 
-//     })
+  //  var obj = db.knex('users').where('password', '=', 'Phillip')
+  //  var obj = db.knex('users').where('username', '=', 'Phillip222').select('username')
+  User.query('where', 'username', '=', username).fetch().then(function (user) {
+    console.log('username', username);
+    console.log('password', password);
+
+    console.log('user', user);
+    // console.log("user.get('password')", user.get('password'));
+
+    // console.log('match =', match);
+
+    // var test = bcrypt.compareSync(password, password);
+    // console.log('test', test);
+
+     bcrypt.compare(password, user.get('password'), function(err, match) {
+       console.log('res -->>', match);
+       console.log('err -->>', err);
+
+       if (match) {
+         res.redirect('/links');
+       }
+     });
+
+  })
+  .catch(function (err) {
+    res.redirect('/signup');
+    console.log('Error', err);
+  });
+
+  //  new User({ username: username })
+  //    .then(function(user) {
+
+      // if (!user) {
+      //   res.redirect('/login');
+      // } else {
+      //   bcrypt.compareSync(password, user.get('password'))
+      // }
+     //})
+});
 
 
+
+// {
+//   username: 'Mike'
+//   password: ######
+// }
+
+
+// user: Mike
+// password: mypassword -> ######
+
+// query db, check if Mike has same hash in db ==
 
 
 //logut for redirect to index or login
-
-
 app.get('/signup',
 function(req, res) {
   res.render('signup');
