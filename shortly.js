@@ -23,24 +23,35 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname + '/public'));
 
 
-app.get('/', 
+// TODO: check if user logged in
+
+// app.use(function(req, res, next) {
+//   var isit = util.isLoggedIn(req, res);
+//   console.log('isit', isit);
+//   console.log('isit', isit);
+//   console.log('DIMA', req.url);
+//   next()
+// });
+
+
+app.get('/',
 function(req, res) {
   res.render('index');
 });
 
-app.get('/create', 
+app.get('/create',
 function(req, res) {
   res.render('index');
 });
 
-app.get('/links', 
+app.get('/links',
 function(req, res) {
   Links.reset().fetch().then(function(links) {
     res.status(200).send(links.models);
   });
 });
 
-app.post('/links', 
+app.post('/links',
 function(req, res) {
   var uri = req.body.url;
 
@@ -75,8 +86,36 @@ function(req, res) {
 /************************************************************/
 // Write your authentication routes here
 /************************************************************/
+app.get('/login',
+function(req, res) {
+  res.render('login');
+});
+//use post to request username and password
+  //create new user for redirect if not exist and then something with password if does exists
+// app.post('/login', function(req, res) {
+//   console.log(req.body.username)
+//   var username = req.body.username;
+//   var password = req.body.password;
+
+//   new User({ username: username })
+//     .fetch()
+//     .then(function(user) {
+
+//     })
 
 
+
+
+//logut for redirect to index or login
+
+
+app.get('/signup',
+function(req, res) {
+  res.render('signup');
+});
+
+//create new user for redirect if user exists to login if not
+//use a function to create a new user with password
 
 /************************************************************/
 // Handle the wildcard route last - if all other routes fail
