@@ -24,36 +24,30 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname + '/public'));
 
 
-// TODO: check if user logged in
 
-// app.use(function(req, res, next) {
-//   var isit = util.isLoggedIn(req, res);
-//   console.log('isit', isit);
-//   console.log('isit', isit);
-//   console.log('DIMA', req.url);
-//   next()
-// });
+var session = require('express-session');
 
+app.use(session({
+  secret: 'salt for cookies',
+  resave: false,
+  saveUninitialized: true
+}));
 
-app.get('/',
-function(req, res) {
+app.get('/', util.checkUser, function(req, res) {
   res.render('index');
 });
 
-app.get('/create',
-function(req, res) {
+app.get('/create', util.checkUser, function(req, res) {
   res.render('index');
 });
 
-app.get('/links',
-function(req, res) {
+app.get('/links', util.checkUser, function(req, res) {
   Links.reset().fetch().then(function(links) {
     res.status(200).send(links.models);
   });
 });
 
-app.post('/links',
-function(req, res) {
+app.post('/links', util.checkUser, function(req, res) {
   var uri = req.body.url;
 
   if (!util.isValidUrl(uri)) {
@@ -87,96 +81,75 @@ function(req, res) {
 /************************************************************/
 // Write your authentication routes here
 /************************************************************/
-app.get('/login',
-function(req, res) {
+app.get('/login', function(req, res) {
   res.render('login');
 });
-//use post to request username and password
-  //create new user for redirect if not exist and then something with password if does exists
-// app.post('/login', function(req, res) {
-//    console.log(req.body.username)
-//    var username = req.body.username;
-//    var password = req.body.password;
-//
-//    new User({ username: username })
-//      .fetch()
-//      .then(function(user) {
-//       if (!user) {
-//         res.redirect('/login');
-//       } else {
-//         bcrypt.compareSync(password, user.get('password'))
-//       }
-//      })
-// });
 
 app.post('/login', function(req, res) {
-   //console.log(req.body.username)
-   //console.log(req.body.password)
    var username = req.body.username;
    var password = req.body.password;
 
-  //  var obj = db.knex('users').where('password', '=', 'Phillip')
-  //  var obj = db.knex('users').where('username', '=', 'Phillip222').select('username')
-  User.query('where', 'username', '=', username).fetch().then(function (user) {
-    console.log('username', username);
-    console.log('password', password);
-
-    console.log('user', user);
-    // console.log("user.get('password')", user.get('password'));
-
-    // console.log('match =', match);
-
-    // var test = bcrypt.compareSync(password, password);
-    // console.log('test', test);
-
-     bcrypt.compare(password, user.get('password'), function(err, match) {
-       console.log('res -->>', match);
-       console.log('err -->>', err);
-
-       if (match) {
-         res.redirect('/links');
-       }
-     });
-
-  })
-  .catch(function (err) {
-    res.redirect('/signup');
-    console.log('Error', err);
-  });
-
-  //  new User({ username: username })
-  //    .then(function(user) {
-
-      // if (!user) {
-      //   res.redirect('/login');
-      // } else {
-      //   bcrypt.compareSync(password, user.get('password'))
-      // }
-     //})
+  new User({ username: username })
+    .fetch()
+    .then(function (user) {
+      if (!user) {
+        return res.redirect('/login');
+      } else {
+        user.comparePassword(password, function (match) {
+          console.log('match', match);
+          if (match) {
+            util.createSession(req, res, user);
+          } else {
+            res.redirect('/login');
+          }
+        });
+      }
+    });
 });
 
+app.get('/logout', function(req, res) {
+  req.session.destroy(function() {
+    res.redirect('/login');
+  });
+});
 
-
-// {
-//   username: 'Mike'
-//   password: ######
-// }
-
-
-// user: Mike
-// password: mypassword -> ######
-
-// query db, check if Mike has same hash in db ==
-
-
-//logut for redirect to index or login
 app.get('/signup',
 function(req, res) {
   res.render('signup');
 });
 
-//create new user for redirect if user exists to login if not
-//use a function to create a new user with password
+app.post('/signup', function(req, res) {
+  var username = req.body.username;
+  var password = req.body.password;
+
+  new User({ username: username })
+    .fetch()
+    .then(function(user) {
+      if (!user) {
+        // BASIC VERSION
+        // bcrypt.hash(password, null, null, function(err, hash) {
+        //   Users.create({
+        //     username: username,
+        //     password: hash
+        //   }).then(function(user) {
+        //       util.createSession(req, res, user);
+        //   });
+        // });
+        // ADVANCED VERSION -- see user model
+        var newUser = new User({
+          username: username,
+          password: password
+        });
+        newUser.save()
+          .then(function(newUser) {
+            util.createSession(req, res, newUser);
+          });
+      } else {
+        console.log('Account already exists');
+        res.redirect('/signup');
+      }
+    });
+});
 
 /************************************************************/
 // Handle the wildcard route last - if all other routes fail
